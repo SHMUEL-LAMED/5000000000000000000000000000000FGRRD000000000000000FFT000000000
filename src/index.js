@@ -80,7 +80,7 @@ export default {
     if (route.pathname === '/api/inspect' && request.method === 'OPTIONS' && request.headers.get('origin') === githubOrigin) return new Response(null, { status: 204, headers: corsHeaders(request) });
     if (route.pathname !== '/api/inspect' || request.method !== 'POST') return json({ error: 'לא נמצא' }, 404, request);
     if (![route.origin, githubOrigin].includes(request.headers.get('origin'))) return json({ error: 'בקשה לא מורשית' }, 403, request);
-    if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'נדרש JSON' }, 415, request);
+    if (!['application/json', 'text/plain'].some(type => request.headers.get('content-type')?.startsWith(type))) return json({ error: 'נדרש גוף בקשה תקין' }, 415, request);
     if (Number(request.headers.get('content-length') || '0') > 4096) return json({ error: 'בקשה גדולה מדי' }, 413, request);
 
     let target;
