@@ -4,17 +4,30 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>הדפדפן הפרטי שלי</title>
 <style>
-:root{font-family:system-ui,Arial,sans-serif;color:#102235;background:#f3f6fa}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px}
-main{max-width:640px;background:#fff;border:1px solid #dce5ef;border-radius:20px;padding:32px;box-shadow:0 12px 35px #15263815}
-h1{margin-top:0}p{line-height:1.7;color:#3f5367}a.button{display:inline-block;background:#1257a6;color:#fff;text-decoration:none;border-radius:10px;padding:13px 20px;font-weight:700}
-.note{background:#f4f7fa;border-radius:10px;padding:14px;margin-top:22px}
+:root{font-family:system-ui,Arial,sans-serif;color:#102235;background:#f2f6fa}*{box-sizing:border-box}body{margin:0;padding:24px}main{max-width:960px;margin:auto}section{background:white;border:1px solid #dbe5ee;border-radius:18px;padding:24px;box-shadow:0 8px 25px #172d4310}h1{margin:0 0 8px}p{color:#40556b;line-height:1.6}form{display:flex;gap:10px;flex-wrap:wrap}input{flex:1;min-width:240px;padding:13px;border:1px solid #9cb0c3;border-radius:9px;font:inherit;direction:ltr}button,.button{background:#1257a6;color:white;border:0;border-radius:9px;padding:13px 20px;font:inherit;cursor:pointer;text-decoration:none;display:inline-block}button:disabled{opacity:.6;cursor:wait}#status{min-height:1.5em}#result[hidden]{display:none}img{width:100%;height:auto;border:1px solid #ccd8e4;border-radius:9px}pre{white-space:pre-wrap;word-break:break-word;line-height:1.7;background:#f4f7fa;padding:16px;border-radius:9px;max-height:360px;overflow:auto}.help{font-size:.92em;background:#f4f7fa;padding:12px;border-radius:8px;margin-top:20px}
 </style>
 </head>
-<body><main>
-<h1>הדפדפן הפרטי שלי</h1>
-<p>זהו דף הכניסה לפרויקט. הדפדפן עצמו פועל ב־Cloudflare ומוגן באמצעות Cloudflare Access.</p>
-<p><a class="button" href="https://shmuel-private-browser.smwlyqswkwt232.workers.dev/">פתח את הדפדפן</a></p>
-<div class="note"><p>אם נטפרי מציגה הודעת חסימה, כתובת השירות עדיין לא זמינה ברשת שלך. דף GitHub זה אינו מפעיל את הדפדפן לבדו.</p>
-<p>הגרסה הנוכחית מציגה צילום מסך וטקסט מדף ציבורי. אין עדיין שליטה בעכבר או הקלדה בתוך האתר.</p></div>
-</main></body></html>
+<body><main><section>
+<h1>הדפדפן הפרטי שלי</h1><p>הדבק כתובת HTTPS כדי לקבל צילום מסך וטקסט מהדף.</p>
+<form id="form"><input id="url" type="url" inputmode="url" placeholder="https://example.com" required pattern="https://.*" aria-label="כתובת האתר"><button id="go">פתח דף</button></form>
+<p id="status" role="status" aria-live="polite"></p>
+<div id="result" hidden><h2 id="title"></h2><p id="address"></p><img id="shot" alt="צילום מסך של האתר"><h3>טקסט מהדף</h3><pre id="content"></pre></div>
+<div class="help">העיבוד מתבצע בשרת Cloudflare המוגן באמצעות Access. <a id="login" href="https://shmuel-private-browser.smwlyqswkwt232.workers.dev/" target="_blank" rel="noopener">כניסה לחשבון Cloudflare בחלון חדש</a>. אחרי הכניסה חזור לכאן ולחץ שוב על „פתח דף”. הדפדפן הזה מציג צילום מסך וטקסט; אין בו עדיין הקלדה או לחיצות בתוך האתר.</div>
+</section></main>
+<script>
+const endpoint='https://shmuel-private-browser.smwlyqswkwt232.workers.dev/api/inspect';
+const form=document.getElementById('form'),button=document.getElementById('go'),status=document.getElementById('status'),result=document.getElementById('result');
+form.addEventListener('submit',async event=>{
+  event.preventDefault();result.hidden=true;button.disabled=true;status.textContent='פותח את הדף...';
+  try{
+    const response=await fetch(endpoint,{method:'POST',mode:'cors',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({url:document.getElementById('url').value})});
+    const data=await response.json();if(!response.ok)throw Error(data.error||'הבקשה נכשלה');
+    document.getElementById('title').textContent=data.title||'ללא כותרת';
+    document.getElementById('address').textContent=data.url;
+    document.getElementById('content').textContent=data.text||'לא נמצא טקסט בדף';
+    document.getElementById('shot').src='data:image/jpeg;base64,'+data.screenshot;
+    result.hidden=false;status.textContent='הדף נטען.';
+  }catch(error){status.textContent=error instanceof TypeError?'לא ניתן להתחבר לשרת. היכנס לחשבון Cloudflare בקישור למטה, וודא שהכתובת פתוחה בנטפרי ושה־Worker עודכן לקבל בקשות מהאתר.':error.message||'שגיאה בפתיחת הדף';}
+  finally{button.disabled=false;}
+});
+</script></body></html>
