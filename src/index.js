@@ -36,10 +36,20 @@ form.addEventListener('submit',async event=>{
 });
 </script></html>`;
 
-function json(value, status = 200) {
+const githubOrigin = 'https://shmuel-lamed.github.io';
+function corsHeaders(request) {
+  return request.headers.get('origin') === githubOrigin ? {
+    'access-control-allow-origin': githubOrigin,
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-methods': 'POST, OPTIONS',
+    'access-control-allow-headers': 'content-type',
+    'vary': 'Origin',
+  } : {};
+}
+function json(value, status = 200, request) {
   return new Response(JSON.stringify(value), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...(request ? corsHeaders(request) : {}) },
   });
 }
 
@@ -67,17 +77,18 @@ export default {
         'x-content-type-options': 'nosniff',
       } });
     }
-    if (route.pathname !== '/api/inspect' || request.method !== 'POST') return json({ error: 'לא נמצא' }, 404);
-    if (request.headers.get('origin') !== route.origin) return json({ error: 'בקשה לא מורשית' }, 403);
-    if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'נדרש JSON' }, 415);
-    if (Number(request.headers.get('content-length') || '0') > 4096) return json({ error: 'בקשה גדולה מדי' }, 413);
+    if (route.pathname === '/api/inspect' && request.method === 'OPTIONS' && request.headers.get('origin') === githubOrigin) return new Response(null, { status: 204, headers: corsHeaders(request) });
+    if (route.pathname !== '/api/inspect' || request.method !== 'POST') return json({ error: 'לא נמצא' }, 404, request);
+    if (![route.origin, githubOrigin].includes(request.headers.get('origin'))) return json({ error: 'בקשה לא מורשית' }, 403, request);
+    if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'נדרש JSON' }, 415, request);
+    if (Number(request.headers.get('content-length') || '0') > 4096) return json({ error: 'בקשה גדולה מדי' }, 413, request);
 
     let target;
     try {
       const body = await request.json();
       target = allowedUrl(body.url);
     } catch {
-      return json({ error: 'יש להזין כתובת HTTPS של אתר ציבורי' }, 400);
+      return json({ error: 'יש להזין כתובת HTTPS של אתר ציבורי' }, 400, request);
     }
 
     let browser;
@@ -90,10 +101,10 @@ export default {
       const title = await tab.title();
       const text = await tab.evaluate(() => document.body?.innerText?.slice(0, 5000) || '');
       const screenshot = await tab.screenshot({ type: 'jpeg', quality: 65 });
-      return json({ url: finalUrl, title, text, screenshot: Buffer.from(screenshot).toString('base64') });
+      return json({ url: finalUrl, title, text, screenshot: Buffer.from(screenshot).toString('base64') }, 200, request);
     } catch (error) {
       console.error('Browser Run:', error);
-      return json({ error: 'לא הצלחתי לפתוח את האתר. בדוק את הכתובת ונסה שוב.' }, 502);
+      return json({ error: 'לא הצלחתי לפתוח את האתר. בדוק את הכתובת ונסה שוב.' }, 502, request);
     } finally {
       if (browser) await browser.close().catch(() => {});
     }
