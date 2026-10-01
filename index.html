@@ -20,7 +20,7 @@ const form=document.getElementById('form'),button=document.getElementById('go'),
 form.addEventListener('submit',async event=>{
   event.preventDefault();result.hidden=true;button.disabled=true;status.textContent='פותח את הדף...';
   try{
-    const response=await fetch(endpoint,{method:'POST',mode:'cors',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({url:document.getElementById('url').value})});
+    const response=await fetch(endpoint,{method:'POST',mode:'cors',credentials:'include',headers:{'content-type':'text/plain'},body:JSON.stringify({url:document.getElementById('url').value})});
     const data=await response.json();if(!response.ok)throw Error(data.error||'הבקשה נכשלה');
     document.getElementById('title').textContent=data.title||'ללא כותרת';
     document.getElementById('address').textContent=data.url;
