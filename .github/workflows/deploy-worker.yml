@@ -1,0 +1,41 @@
+name: Deploy private browser Worker
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/index.js
+      - package.json
+      - wrangler.jsonc
+      - .github/workflows/deploy-worker.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: private-browser-worker
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Cloudflare deployment credential
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Set CLOUDFLARE_API_TOKEN in repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check Worker syntax
+        run: node --check src/index.js
+      - name: Deploy existing Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7c5ecc8cc6dc99838cfbf1b3a1086b74
+        run: npx wrangler deploy
